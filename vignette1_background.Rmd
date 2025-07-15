@@ -23,19 +23,19 @@ options(tibble.print_min = 4, tibble.print_max = 4)
 #1) Key package
 #install.packages("pak")
 #pak::pak("dobengjhu/multicate")
-library(multicate)
+#library(multicate)
 
 #2) Additional packages for data cleansing
-library(tibble)
+#library(tibble)
 #install.packages("tableone")
-library(tableone)
-library(tidyverse)
+#library(tableone)
+#library(tidyverse)
 #install.packages("fastDummies")  # if not already installed
-library(fastDummies)
+#library(fastDummies)
 #install.packages("kableExtra")
-library(kableExtra)
+#library(kableExtra)
 #install.packages("performance")
-library(performance)
+#library(performance)
 
 #https://www.geeksforgeeks.org/how-to-make-an-r-package-vignette/
 #https://bookdown.org/yihui/rmarkdown-cookbook/package-vignette.html
@@ -46,68 +46,69 @@ This guide provides an introduction to the `multicate` package -- an R package f
 
 [^1]: Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. <https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955>
 
-# Background
+ 
+
+# Purpose of `multicate`
 
 Randomized controlled trials (RCTs) are considered the gold standard for unbiased estimation of treatment effects. However, RCTs often have limited power to detect heterogeneous treatment effects (HTE) due to sample size constraints, and they may not reflect populations to which findings will be applied. To address these limitations, researchers have developed various methods to combine data from multiple RCTs to improve treatment effect estimation, including approaches such as meta-analysis. However, these techniques often do not explicitly target conditional average treatment effects and typically rely on aggregate-level data, making it challenging to estimate treatment effects conditional on individual-level characteristics.
 
-Enter `multicate`. The `multicate` package implements methodologies that combine multiple RCTs using individual, patient-level data (IPD). The focal *estimand* in this package is the conditional average treatment effect (CATE), defined under Rubin's potential outcomes framework.[^2] We define $A$ to represent a binary treatment indicator, $S$ a categorical variable for the trial in which the individual participated (from 1 to $K$, with a total of $K$ RCTs), $X$ the covariates, and $Y$ a continuous outcome. Then, we let $Y(0)$ and $Y(1)$ be the potential outcomes under control and treatment, respectively. Generally, the CATE is defined as the expected difference in the potential outcomes under treatment versus control, *conditional on covariates,* $X$:$$\tau=E(Y(1)|X)-E(Y(0)|X)$$
+Enter `multicate`. The `multicate` package implements methodologies that combine multiple studies using individual, patient-level data (IPD). The focal *estimand* in this package is the conditional average treatment effect (CATE), defined under Rubin's potential outcomes framework.[^2] We define $A$ to represent a binary treatment indicator, $S$ a categorical variable for the trial in which the individual participated (from 1 to $K$, with a total of $K$ RCTs), $\textbf{X}$ the covariates, and $Y$ a continuous outcome. Then, we let $Y(0)$ and $Y(1)$ be the potential outcomes under control and treatment, respectively. Generally, the CATE is defined as the expected difference in the potential outcomes under treatment versus control, *conditional on covariates,* $\textbf{X}$:$$\tau(\textbf{X})=E(Y(1)|\textbf{X})-E(Y(0)|\textbf{X})$$
 
 [^2]: Rubin, D. B. (1974). Estimating causal effects of treatments in randomized and nonrandomized studies. Journal of educational Psychology, 66(5), 688. <https://psycnet.apa.org/record/1975-06502-001>
 
-We can also conceptualize the CATE as conditional not only on covariates, but also on study membership, where differences in the treatment effect due to study membership may reflect differences in the distributions of unobserved effect moderators. Here, the CATE can be expressed as $$\tau_{S}(X) = E(Y(1)|X, S)-E(Y(0)|X, S)$$
-The `multicate` package can estimates either of these CATE expressions, depending on the specific estimation (or prediction) technique chosen. 
+We can also conceptualize the CATE as conditional not only on covariates, but also on study membership, where differences in the treatment effect due to study membership may reflect differences in the distributions of unobserved effect moderators. Here, the CATE can be expressed as $$\tau_{S}(\textbf{X}) = E(Y(1)|\textbf{X}, S)-E(Y(0)|\textbf{X}, S)$$ The `multicate` package can estimates either of these CATE expressions, depending on the specific estimation (or prediction) technique chosen. Notably, while the methods in `multicate` were originally developed to target CATE estimation across multiple *RCTs*, they can also be utilized in non-experimental studies. We elaborate upon this in the sections to follow.
 
  
 
- 
+# Features of `multicate`
 
-# Introduction
+The `multicate` package enables researchers to combine multiple RCTs to estimate the CATE using various estimation and aggregation methods, while effectively handling heterogeneity in the data. This approach not only increases statistical power but also extends findings from a single study to multiple studies, providing a more robust foundation for personalized decision-making in diverse populations.
 
-The `multicate` package enables researchers to integrate multiple RCTs using various aggregation and estimation methods, while effectively handling heterogeneity in the data. This approach not only increases statistical power but also extends findings from a single study to multiple studies, providing a more robust foundation for personalized decision-making in diverse populations.
+-   **Goal:** Guide treatment decision-making in a health care or other practical setting by estimating heterogeneous treatment effects
 
--   Goal: Guide treatment decision-making in a health care or other practical setting by estimating heterogeneous treatment effects
+-   **Data:** multiple RCTs (or other studies), as well as optionally a new target population
 
--   Setting: Have multiple RCTs and a target population at baseline that is not from those RCTs
+-   **Key features:**
 
--   Key features:
+    -   *Estimation* of CATEs with different combinations of estimation and aggregation methods
 
-    -   
+    -   *Visualization* of CATEs and relevant models
 
-        1)  Estimation of CATEs with different combinations of aggregation and estimation methods
+    -   *Prediction* of CATEs for a target population
 
-    -   
+`multicate` incorporates (1) estimation across multiple studies, (2) estimation of the CATE (beyond the overall average treatment effect), (3) implements visualization techniques to increase interpretability of machine learning methods for CATE estimation, and (4) prediction techniques for predicting the CATE in a new target population.
 
-        2)  Visualization of CATEs and relevant models
-
-    -   
-
-        3)  Prediction of CATEs for a target population
-
-![A comparison table of R packages related to estimate CATE or heterogeneity](S:/pmcmood-es_mods/KJ/Multicate/Rpackage_comparison.png)
-
- 
-
-Compared to other packages that more focus primarily on meta-analysis, our package, `mulicate` is unique in that it is specially designed to estimate Conditional Average Treatment Effects (CATE) by combining multiple RCTs and predict CATEs in a target population of interest. The aim of this package is to use this package to make informed decisions on which treatment may be preferable for the given covariate profile. To our knowledge, no other R package currently supports both estimation and prediction of CATEs specifically when combining RCTs with machine learning methods. A more detailed explanation of the methods, their contributions and limitations is provided in Brantner et al. (2024).[^3]
+Compared to other packages that more focus primarily on meta-analysis, `multicate` is unique in that it is specially designed to estimate the CATE by combining multiple studies and predict CATEs in a target population of interest. The aim of this package is to use this package to make informed decisions on which treatment may be preferable for a set covariate profiles – profiles of patients defined based on their characteristics. To our knowledge, no other R package currently supports both estimation and prediction of CATEs specifically when combining RCTs with machine learning methods. A more detailed explanation of the methods, their contributions and limitations is provided in Brantner et al. (2024).[^3]
 
 [^3]: Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. <https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955>
 
-![A comparison table of R packages related to estimate CATE or heterogeneity](S:/pmcmood-es_mods/KJ/Multicate/TwoStep.png){width="500px" height="300px"}
+![A comparison table of R packages related to estimation of heterogeneous treatment effects](Images/Rpackage_comparison.png)
 
  
 
- 
+# Process of `multicate`
 
-# Assumptions
+`multicate` relies on two primary functions, `estimate_cate()` and `predict_cate()`. They do exactly what you'd expect - estimate and predict the CATE, respectively. Below displays a potential workflow for a two-step approach to use `multicate`. Notably, researchers do not have to proceed to Step 2 - often a goal is solely focused on estimation of the CATE across multiple studies (Step 1).
 
-The standard causal inference assumptions, including the Stable Unit Treatment Value Assumption (SUTVA) are maintained within each RCT, but for the assumption 4, which requires that any covariate $X$ is possible to be observed in all studies, may be relaxed depending on the method used.
+![A two-step approach for using the `multicate` package.](Images/TwoStep.png){width="550px" height="300px"}
 
-![Assumptions that this package is based on](S:/pmcmood-es_mods/KJ/Multicate/Assumptions.png){width="500px" height="220px"}
+## Assumptions
 
- 
+Estimating the CATE across multiple trials rely on a few key assumptions. These include the Stable Unit Treatment Value Assumption (SUTVA), unconfoundedness, consistency, and positivity.
 
- 
+1.  **Stable Unit Treatment Value Assumption (SUTVA)**
+2.  **Unconfoundedness of each study:** $Y(0), Y(1) \perp A \mid \textbf{X}$
+3.  **Consistency in each study:** $Y = AY(1) + (1-A)Y(0)$ almost surely
+4.  **Positivity of treatment assignment in each study:** There exists a constant $b>0$ such that $b < P(A = 1|\textbf{X}) < 1-b$ for all $\textbf{X}$
+5.  **Positivity of study membership:** There exists a constant $c>0$ such that $c < P(S=s|\textbf{X})<1-c$ for all $\textbf{X}$ and $s$.
 
-# Non-parametric machine learning methods
+Unconfoundedness and positivity of treatment assignment are met by design in an RCT, and they can be evaluated in observational studies. Assumption 5, which requires that any covariate $\textbf{X}$ is possible to be observed in all studies, may be relaxed depending on the estimation method used.
+
+When `multicate` is used for predicting the CATE in a target population, we rely on estimation of the CATE first, using the same above assumptions as above. Our only addition is;
+
+6.  **Positivity of target population:** There exists a constant $d>0$ such that $d < P(S=s|\textbf{X})<1-d$ for all $\textbf{X}$ *in the target population* and $s$. 
+
+## Estimation Methods:
 
 While Meta-analysis is commonly applied within a parametric framework, real-world clinical data often involve complex structures that violate parametric assumptions. Unlike parametric models that require pre-specification of effect moderators and distributional assumptions, nonparametric methods offer greater flexibility, especially in modeling nonlinear relationships between covariates and treatment effects.
 
@@ -121,9 +122,7 @@ Causal forest is similar to a traditional random forest, but the primary estiman
 
  
 
- 
-
-# Multiple RCT setting with three aggregation methods
+## Multiple RCT setting with three aggregation methods
 
 This package is especially well-suited for combining multiple RCTs with various aggregation methods. One of the most common aggregation methods is the 'federated learning setting', where individual-level data cannot be shared across study sites, and only aggregate results or models are shared. However, our package also supports settings where individual-level data can be shared across trials.
 
@@ -143,14 +142,12 @@ This method is based on Tan and colleagues' methods[^4] for federated learning, 
 
  
 
- 
-
 # Predict CATE of target population
 
 A unique feature of the `multicate` package is its ability to predict CATEs for a target population — such as a new group of patients at baseline in a healthcare system — using models trained on multiple RCTs. This is particularly useful when models trained on RCTs need to be applied to individuals outside of the original study samples, such as patients from electronic health records (EHR) or historical data from clinical systems. When multiple RCTs involve the same treatment options, you can use this package to apply fitted models to these external individuals and guide real-world treatment decisions.
 
  
 
- 
-
 # Q&A
+
+observational studies
