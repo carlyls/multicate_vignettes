@@ -1,0 +1,156 @@
+---
+title: "The multicate R Package: An Introduction"
+author: "Kyungeun Jeon, Carly Brantner, Daniel Obeng, Elizabeth Stuart"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4       # Optional: how many header levels to include 
+    toc_float: true    # Optional: makes the TOC float alongside the text
+vignette: >
+  %\VignetteIndexEntry{multicate}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(tibble.print_min = 4, tibble.print_max = 4)
+#install.packages("devtools")
+#install.packages("knitr")
+#install.packages("usethis")
+
+#1) Key package
+#install.packages("pak")
+#pak::pak("dobengjhu/multicate")
+library(multicate)
+
+#2) Additional packages for data cleansing
+library(tibble)
+#install.packages("tableone")
+library(tableone)
+library(tidyverse)
+#install.packages("fastDummies")  # if not already installed
+library(fastDummies)
+#install.packages("kableExtra")
+library(kableExtra)
+#install.packages("performance")
+library(performance)
+
+#https://www.geeksforgeeks.org/how-to-make-an-r-package-vignette/
+#https://bookdown.org/yihui/rmarkdown-cookbook/package-vignette.html
+#%\ is also fine rather than \\, {knitr::rmarkdown} is also fine.
+```
+
+This guide provides an introduction to the `multicate` package -- an R package for estimation and prediction of heterogeneous treatment effects across one or more studies. The background below is further outlined in the Brantner et al., 2024 paper entitled *Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects*.[^1] The package can be found [here](https://github.com/dobengjhu/multicate).
+
+[^1]: Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. <https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955>
+
+# Background
+
+Randomized controlled trials (RCTs) are considered the gold standard for unbiased estimation of treatment effects. However, RCTs often have limited power to detect heterogeneous treatment effects (HTE) due to sample size constraints, and they may not reflect populations to which findings will be applied. To address these limitations, researchers have developed various methods to combine data from multiple RCTs to improve treatment effect estimation, including approaches such as meta-analysis. However, these techniques often do not explicitly target conditional average treatment effects and typically rely on aggregate-level data, making it challenging to estimate treatment effects conditional on individual-level characteristics.
+
+Enter `multicate`. The `multicate` package implements methodologies that combine multiple RCTs using individual, patient-level data (IPD). The focal *estimand* in this package is the conditional average treatment effect (CATE), defined under Rubin's potential outcomes framework.[^2] We define $A$ to represent a binary treatment indicator, $S$ a categorical variable for the trial in which the individual participated (from 1 to $K$, with a total of $K$ RCTs), $X$ the covariates, and $Y$ a continuous outcome. Then, we let $Y(0)$ and $Y(1)$ be the potential outcomes under control and treatment, respectively. Generally, the CATE is defined as the expected difference in the potential outcomes under treatment versus control, *conditional on covariates,* $X$:$$\tau=E(Y(1)|X)-E(Y(0)|X)$$
+
+[^2]: Rubin, D. B. (1974). Estimating causal effects of treatments in randomized and nonrandomized studies. Journal of educational Psychology, 66(5), 688. <https://psycnet.apa.org/record/1975-06502-001>
+
+We can also conceptualize the CATE as conditional not only on covariates, but also on study membership, where differences in the treatment effect due to study membership may reflect differences in the distributions of unobserved effect moderators. Here, the CATE can be expressed as $$\tau_{S}(X) = E(Y(1)|X, S)-E(Y(0)|X, S)$$
+The `multicate` package can estimates either of these CATE expressions, depending on the specific estimation (or prediction) technique chosen. 
+
+ 
+
+ 
+
+# Introduction
+
+The `multicate` package enables researchers to integrate multiple RCTs using various aggregation and estimation methods, while effectively handling heterogeneity in the data. This approach not only increases statistical power but also extends findings from a single study to multiple studies, providing a more robust foundation for personalized decision-making in diverse populations.
+
+-   Goal: Guide treatment decision-making in a health care or other practical setting by estimating heterogeneous treatment effects
+
+-   Setting: Have multiple RCTs and a target population at baseline that is not from those RCTs
+
+-   Key features:
+
+    -   
+
+        1)  Estimation of CATEs with different combinations of aggregation and estimation methods
+
+    -   
+
+        2)  Visualization of CATEs and relevant models
+
+    -   
+
+        3)  Prediction of CATEs for a target population
+
+![A comparison table of R packages related to estimate CATE or heterogeneity](S:/pmcmood-es_mods/KJ/Multicate/Rpackage_comparison.png)
+
+ 
+
+Compared to other packages that more focus primarily on meta-analysis, our package, `mulicate` is unique in that it is specially designed to estimate Conditional Average Treatment Effects (CATE) by combining multiple RCTs and predict CATEs in a target population of interest. The aim of this package is to use this package to make informed decisions on which treatment may be preferable for the given covariate profile. To our knowledge, no other R package currently supports both estimation and prediction of CATEs specifically when combining RCTs with machine learning methods. A more detailed explanation of the methods, their contributions and limitations is provided in Brantner et al. (2024).[^3]
+
+[^3]: Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. <https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955>
+
+![A comparison table of R packages related to estimate CATE or heterogeneity](S:/pmcmood-es_mods/KJ/Multicate/TwoStep.png){width="500px" height="300px"}
+
+ 
+
+ 
+
+# Assumptions
+
+The standard causal inference assumptions, including the Stable Unit Treatment Value Assumption (SUTVA) are maintained within each RCT, but for the assumption 4, which requires that any covariate $X$ is possible to be observed in all studies, may be relaxed depending on the method used.
+
+![Assumptions that this package is based on](S:/pmcmood-es_mods/KJ/Multicate/Assumptions.png){width="500px" height="220px"}
+
+ 
+
+ 
+
+# Non-parametric machine learning methods
+
+While Meta-analysis is commonly applied within a parametric framework, real-world clinical data often involve complex structures that violate parametric assumptions. Unlike parametric models that require pre-specification of effect moderators and distributional assumptions, nonparametric methods offer greater flexibility, especially in modeling nonlinear relationships between covariates and treatment effects.
+
+### 1) S-learner
+
+The S-learner is a 'meta-learner' in that it combines base learners of different forms in a special way, and use this learner to estimate a conditional outcome mean function given observed covariates and assigned treatment as $\mu(X,A) = E(Y|X,A)$. Then by plugging in 0 and 1 for $A$, we can obtain predicted outcomes under treatment and control for each individual and calculate $\hat{\tau} = \hat{\mu} (X,1) - \hat{\mu} (X,0)$. In this package, we applied 'random forest' for this base learner.
+
+### 2) Causal forest
+
+Causal forest is similar to a traditional random forest, but the primary estimand is the treatment effect itself, not the outcome mean function. It recursively partitions covariates to best split based on treatment effect heterogeneity. The treatment effect is estimated as the difference in average outcomes between the treatment and control units 'within each leaf'. In other words, the causal forest is the weighted aggregation of many causal trees.
+
+ 
+
+ 
+
+# Multiple RCT setting with three aggregation methods
+
+This package is especially well-suited for combining multiple RCTs with various aggregation methods. One of the most common aggregation methods is the 'federated learning setting', where individual-level data cannot be shared across study sites, and only aggregate results or models are shared. However, our package also supports settings where individual-level data can be shared across trials.
+
+### 1) No pooling
+
+When trials are too heterogeneous to justify combining information across studies, it may be preferable to estimate effects separately for each trial. In this case, fitting models within each study independently would be most appropriate. Note that this is not technically an 'aggregation approach' since each study is analyzed independently, and no cross-study information is used. You can specify this setting with \`aggregation_method = "*studyspecific*".
+
+### 2) Pooling with trial indicator
+
+A 'complete pooling approach' - combining all data and treating it as a single study - requires strong assumptions. To relax these, our package implements 'pooling with a trial indicator'. Basically, all of the individual data from all RCTs is combined into one comprehensive dataset, but a categorical study variable is included. This allows researchers to apply single-study approaches while accounting for full covariates including membership indicator. This will yield trial-specific CATE estimates. You can use aggregation_method = "*studyindicator*" to apply this method.
+
+### 3) Ensemble forest method
+
+This method is based on Tan and colleagues' methods[^4] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and apply these models to all individual in all RCTs to get each individual trial-specific CATE estimates. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
+
+[^4]: Tan, X., Chang, C. C. H., Zhou, L., & Tang, L. (2022, June). A tree-based model averaging approach for personalized treatment effect estimation from heterogeneous data sources. In International Conference on Machine Learning (pp. 21013-21036). PMLR. <https://proceedings.mlr.press/v162/tan22a.html>
+
+ 
+
+ 
+
+# Predict CATE of target population
+
+A unique feature of the `multicate` package is its ability to predict CATEs for a target population — such as a new group of patients at baseline in a healthcare system — using models trained on multiple RCTs. This is particularly useful when models trained on RCTs need to be applied to individuals outside of the original study samples, such as patients from electronic health records (EHR) or historical data from clinical systems. When multiple RCTs involve the same treatment options, you can use this package to apply fitted models to these external individuals and guide real-world treatment decisions.
+
+ 
+
+ 
+
+# Q&A

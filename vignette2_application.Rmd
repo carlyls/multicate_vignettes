@@ -1,0 +1,410 @@
+---
+title: "Applying multicate"
+author: "Kyungeun Jeon, Carly Brantner, Daniel Obeng, Elizabeth Stuart"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3       # Optional: how many header levels to include (e.g., h1, h2)
+    toc_float: true    # Optional: makes the TOC float alongside the text
+vignette: >
+  %\VignetteIndexEntry{multicate}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(tibble.print_min = 4, tibble.print_max = 4)
+#install.packages("devtools")
+#install.packages("knitr")
+#install.packages("usethis")
+
+#1) Key package
+#install.packages("pak")
+#pak::pak("dobengjhu/multicate")
+library(multicate)
+
+#2) Additional packages for data cleansing
+library(tibble)
+#install.packages("tableone")
+library(tableone)
+library(tidyverse)
+#install.packages("fastDummies")  # if not already installed
+library(fastDummies)
+#install.packages("kableExtra")
+library(kableExtra)
+#install.packages("performance")
+library(performance)
+
+#https://www.geeksforgeeks.org/how-to-make-an-r-package-vignette/
+#https://bookdown.org/yihui/rmarkdown-cookbook/package-vignette.html
+#%\ is also fine rather than \\, {knitr::rmarkdown} is also fine.
+```
+
+
+This guide provides an introduction to applying the `multicate` package in health data analyses. The explanations below are based on the original paper that is based on for development of this package: *Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine (Brantner et al., 2024)*.^[Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955] The detailed github code and readme are in this link(https://github.com/dobengjhu/multicate). 
+
+
+# Application
+
+## 1) Load packages
+
+To get strated, install and load the `multicate` package using either `install.packages(multicate)` or `pak::pak("dobengjhu/multicate")`. To explore the functionality of the package, you can examine the sample dataset `dummy_tbl`. This dataset includes three previously conducted trials comparing the same two treatments. It contains:
+
+- An outcome variable called `response`
+
+- A treatment indicator `tx`
+
+- Five signal covariates (`var` to `var5`) that may act as effect modifiers
+
+You can view a summary of the dataset with `summary(dummy_tbl)`.
+
+In this documnet, except for `multicate`, we used the packages as follow.
+```{r}
+# 1) Install multicate package
+#install.packages("multicate")
+#pak::pak("dobengjhu/multicate")
+library(multicate)
+
+#2) Additional packages for data cleansing
+library(tibble)
+#install.packages("tableone")
+library(tableone)
+library(tidyverse)
+#install.packages("fastDummies")  # if not already installed
+library(fastDummies)
+#install.packages("kableExtra")
+library(kableExtra)
+#install.packages("performance")
+library(performance)
+```
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(dummy_tbl, 10))
+```
+
+
+&nbsp; 
+
+
+## 2) RHC dataset
+In this example, we use data from a study of Right Heart Catheterization (RHC), a diagnostic procedure used to measure cardiac function in critically ill patients. While RHC can guide urgent and ongoing treatment decisions, it also carries a risk of serious complications. The observational dataset originates from Murphy and Cluff (1990), was later reanalyzed by Connors et al. (1996), and has since become a benchmark dataset in causal inference research.
+
+- Data^[https://hbiostat.org/data]
+
+- Dictionary^[https://hbiostat.org/data/repo/rhc]
+
+The dataset (`rhc.xls`) includes information on 5,735 hospitalized adult patients across five U.S. medical centers. The `treatment` variable (column 2) indicates whether RHC was administered within 24 hours of admission (`TRUE` for treatment; `FALSE` for control). The outcome variable of this study is originally `dth30` (column 54), records 30-day post-admission mortality (`TRUE` for death; `FALSE` for survival), but in this example, we set the outcome Glasgow Coma Score (`scoma1` variable) as our continuous coutcome. 
+
+Covariate information (column 3 to 53): age, sex, race (black, white, other), years of education,income, type of medical insurance (private, Medicare, Medicaid, private and Medicare, Medicare and Medicaid, or none), primary disease category, secondary disease category, 10 categories of admission diagnosis, activities of daily living (ADL) and Duke Activity Status Index (DASI) 2 weeks before admission, do-not-resuscitate status on day 1 of admission, cancer (none, localized, metastatic), an estimate of the probability of surviving 2 months, acute physiology component of the APACHE III score, Glasgow Coma Score, weight, temperature, mean blood pressure, respiratory rate, heart rate, PaO2=FIO2 ratio, PaCO2, pH, WBC count, hematocrit, sodium, potassium, creatinine, bilirubin, albumin, urine output, 12 categories of comorbidity illness, and whether the patient transferred from another hospital. Since the number of covariates are too big for this demonstration purpose, we will choose a smaller set of covariates in analysis. 
+
+To demonstrate the functionality of the `multicate` package in the context of multiple studies, we simulate study membership by arbitrarily dividing the dataset into five groups, treating them as if they came from five distinct medical centers. Although the original dataset does not indicate which patient belongs to which hospital, this simulated structure allows us to explore treatment effect heterogeneity across centers and individual-level covariates.
+
+```{r, warning=FALSE}
+#Load data
+rhc <- read.csv(file="rhc.xls", header=TRUE)
+rhc <- rhc %>% mutate(across(where(is.logical), as.numeric))
+rhc <- rhc %>% subset(select = c(-ID))
+rhc$center <- rep(1:5, each=nrow(rhc)/5)
+rhc$center <- as.character(rhc$center)
+
+#Choose covariates to be used for this study
+rhc <- rhc %>% select(treatment, center, scoma1,  
+                      race, ninsclas,
+                      hrt1, resp1, bili1, pafi1, aps1, temp1, das2d3pc, sod1, liverhx)
+```
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(rhc %>% select(center, everything()), 10))
+```
+
+
+&nbsp; 
+
+## 3) Data preparation
+
+As described above, the `multicate` package builds on other modeling packages, which require the input data to be fully numeric and free of missing (NA) values. To meet these requirements, we pre-processed the dataset accordingly. 
+
+After removing missing values (NA) and simplifying categorical variable levels, we convert all factor and character covariates variables into numeric or dummy variables using `fastDummies` package. The `janitor` package's function, `janitor::clean_names()` is helpful for standardizing column names by replacing spaces and special characters (e.g., converting `condition_no symptoms` to `condition_no_symptoms`). 
+
+```{r, echo=FALSE, results="hide"}
+#1. Remove NA values or Too many None values
+rhc_clean <- na.omit(rhc)
+#rhc_clean <- rhc_clean %>% select(-cat2, -ortho)
+
+#2. Simplify valid values for fastdummies
+rhc_clean <- rhc_clean %>%
+  mutate(ninsclas = case_when(
+    ninsclas == "Medicare & Medicaid" ~ "Medicare_Medicaid",
+    ninsclas == "No insurance" ~ "No_insurance",
+    ninsclas == "Private & Medicare" ~ "Private_Medicare",
+    TRUE ~ ninsclas
+  )) 
+
+#3. Convert all covariates to numeric values
+#treat metastatic cancer as cancer 'Yes'
+rhc_clean <- rhc_clean %>%
+  mutate(across(where(is.character), ~ {
+    if (all(.x %in% c("Yes", "No"), na.rm = TRUE)) {
+      as.numeric(.x == "Yes")
+    } else {
+      as.factor(.x)
+    }
+  }))
+
+library(fastDummies)
+rhc_clean <- dummy_cols(rhc_clean, select_columns = c("race","ninsclas"), remove_first_dummy = TRUE)
+
+
+#4. make sure the one-hot encoding column name is not weird
+rhc_clean <- janitor::clean_names(rhc_clean)
+
+
+#5. make sure all have numeric covariates or you can use drop_col parameter.
+rhc_clean_remove <- rhc_clean %>% select(-ninsclas, -race) #You can remove those variables via drop_col parameter.
+
+```
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(rhc_clean %>% select(center, everything()), 10))
+```
+
+
+&nbsp; 
+
+## 4) Choose aggregation and estimation method
+
+&nbsp; 
+
+The example below is the sample with **causal forest** for the estimation method, and **study specific** for the aggregation method. 
+
+```{r}
+set.seed(100)
+cate_mod <- estimate_cate(rhc_clean,
+                          estimation_method = "causalforest",
+                          aggregation_method = "studyspecific",
+                          study_col = "center",
+                          treatment_col = "treatment",
+                          outcome_col = "scoma1",
+                          covariate_col = NULL,
+                          drop_col = c("race","ninsclas"))
+summary_cate_mod <- summary(cate_mod)
+
+#result
+#cate_mod2
+```
+```{r}
+#result summary
+summary_cate_mod$ate
+```
+
+
+```{r}
+set.seed(100)
+cate_mod2 <- estimate_cate(rhc_clean,
+                          estimation_method = "causalforest",
+                          aggregation_method = "studyindicator",
+                          study_col = "center",
+                          treatment_col = "treatment",
+                          outcome_col = "scoma1",
+                          covariate_col = NULL,
+                          drop_col = c("race","ninsclas"))
+summary_cate_mod2 <- summary(cate_mod2)
+
+#result
+#cate_mod2
+```
+```{r}
+#result summary
+summary_cate_mod2$ate
+```
+
+
+&nbsp; 
+
+
+## 5) Visualization of estimation
+
+The `plot()` funciton with `estimate_cate()` objects provides five visualizations to help interpret the estiamted CATEs: 1. Histogram of the CATEs, 2. Boxplot of CATEs stratified by study membership, 3. Confidence interval plot shoing 95% confidence intervals for all CATEs, sorted by their estiamted CATEs, 4. Best linear projection (available only when `estimation_method = "causalforest"`), 5. Interpretation tree for visualizing how covariates drive treatment effect heterogeneity.
+
+```{r}
+plot(cate_mod)
+```
+
+
+Additionally, the `plot_vteffect()` provides a more focused visualization if you are interested in exploring treatment effect heterogeneity with respect to a specific **continuous** covariate. It plots the estimated CATE (`tau_hat`) for each observation against the selected covariate, allowing you to see how treatment effects vary across its range and across different studies.
+
+For example, if you're interested in how treatment effects differ by `aps1` across studies, you can specify this variable using the `covariate_name = "aps1"` parameter.
+
+```{r}
+plot_vteffect(cate_mod, covariate_name = "aps1")
+```
+
+&nbsp; 
+
+## 5) Predict CATEs for target population
+
+For prediction, the aggregation method must be set to '`studyspecific`'. While only the `studyspecific` aggregation is supported for prediction, the estimation method can be either "causal forest" or "s-learner". To illustrate, we can randomly select 100 observations from the original dataset as a simplified target population. In practice, the target data can include any set of covariate profiles for which the researcher wants to generate prediction intervals. However, an important assumption is that the covariate profiles in the target data fall within the distribution of at least one of the studies used to estimate the CATE—this is known as the positivity assumption.
+
+The `predict()` function with `estimate_cate()` objects in `multicate` implements a two-stage meta-analysis approach to generate prediction intervals:
+
+1. Stage1: A model is fit within each study to estimate CATE given covariate profile in the target data.
+2. Stage2: A random effects meta-analysis is then applied to combine the study-specific CATE estiamtes and quantify uncertainty.
+
+The resulting prediction interval for the CATE for covariate profile in the target setting represents a range of potential values that the CATE may be in the new setting. For more detailed assumptions and mathematical formulations, refer to the link.^[https://github.com/dobengjhu/multicate/blob/main/R/predict_cate.R]
+
+```{r}
+new_dat <- sample_n(rhc_clean, 100)
+```
+
+This prediction results include three additional columns beyond the original dataet.
+- tau_predicted: the estimated Conditional Average Treatment Effect (CATE)
+- pi_lower: the lower bound of the prediction interval
+- pi_upper: the upper bound of the prediction interval
+
+```{r, echo=FALSE, results='asis'}
+new_dat <- rhc_clean %>% sample_n(100)
+
+predict_res <- predict(cate_mod, new_dat)
+predict_res2 <- predict_res %>% select(tau_predicted, pi_lower, pi_upper, everything())
+
+knitr::kable(head(predict_res2, 10))
+```
+
+
+
+&nbsp; 
+
+
+# Which dataset is suitable?
+
+&nbsp; 
+
+#### Q. What kinds of data should I have?
+
+While the primary purpose of this package is for RCTs, but the base dataset can be from randomized controlled trials, observational studies, or a combination of both. Our functions are primarily designed for IPD (Individual Patient Data). The dataset must contain at least **4** key components, a **study indicator variable**, a **treatment indicator variable**, An **outcome variable**, and **covariate variables**. 
+
+&nbsp; 
+
+#### Q. What data format is required?
+
+You should be careful to use which data formats your data has. For this package, the treatment variable should be numeric (e.g. 0 or 1), the study ID should be character (factor is allowed.), and the outcome must be numeric. Note that this package is primarily designed for **continuous outcome**, and covariates should be all numeric.
+
+Data column  Data format
+------------ ------------ 
+treatment    numeric(0,1)
+studyid      character
+outcome      numeric
+covariates   numeric
+
+&nbsp; 
+
+##### Q. Can I have missing values?
+
+No. Packages like `grf` (used for causal_forest) do not support missing values. You must either remove rows with `NA` or impute missing values before analysis. 
+
+&nbsp; 
+
+#### Q. What if I have categorical or factor variables in my covariates?
+
+If you need to include factor variables, we recommend the following: 
+
+The brief summary of solutions suggested by the grf vignett is as follows:
+
+1) One-hot encoding: Use `fastdummies` to convert categorical variables into dummy variables easily.
+- Ensure that values do not contain spaces or special characters. For example, convert 'study 1' to 'study_1'.
+
+2) Means encoding: Use the `sufrep` package for target/means encoding.
+
+3) Oridinal encoding: If your categorical variable has a natural order (e.g. months), encode it as a numeric variable accordingly. 
+
+See the `grf` vignette on categorical inputs for mode deail.^[https://grf-labs.github.io/grf/articles/categorical_inputs.html]
+
+&nbsp; 
+
+#### Q. I applied one-hot encoding but it is still not working-Why?
+
+Ensure that the column names or formulas passed to estimate_cate() do not contain spaces or logical connectors (like 'and'). The `janitor` package is helpful for cleaning column names by replacing spaces with underscores (e.g., 'variable name' becomes 'variable_name'). This step is especially important when using the **ensemble forest** method.
+
+&nbsp; 
+
+
+#### Q. Why did I encounter errors when using the causal forest with the study-specific method?
+
+These errors may be caused by lack of sufficient variation or sparsity in one or more covariates. When a variable has very few observations in a particular category (e.g., a binary variable with only a handful of "Yes" values), it can lead to unstable splits in tree-based models like causal forest, or to overfitting, especially in small subgroups.
+
+Before applying the model to clinical data, it is recommended to examine the distribution of each covariate to identify rare levels or highly imbalanced variables that may affect model performance.
+
+&nbsp; 
+
+
+#### Q. What other packages are used internally?
+
+   + slearner: Based on the `dbarts` and `grf`packages. 
+      + The detailed arguments can be found in the paper by Hill (2011)^[Hill, J. L. (2011). Bayesian Nonparametric Modeling for Causal Inference. Journal of Computational and Graphical Statistics, 20(1), 217–240. https://doi.org/10.1198/jcgs.2010.08162] and Künzel (2019)^[Künzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). Metalearners for estimating heterogeneous treatment effects using machine learning. Proceedings of the national academy of sciences, 116(10), 4156-4165. https://www.pnas.org/doi/abs/10.1073/pnas.1804597116]. The default arguments are as follows: `keeptrees` is set to `TRUE`, and `verbose` is set to `FALSE` when `aggregation_method` is set to `ensembleforest`.
+
+   + causalforest: Based on the package `grf`'s `causal_forest`. 
+      + You can refer to the detailed arguments in the paper by Athey et al. (2019)^[Athey, S., Tibshirani, J., & Wager, S. (2019). Generalized random forests. https://arxiv.org/abs/1610.01271]. This is estimated by averaging the treatment effect across patients, accounting for counterfactual assignments. The default arguments are as follows: `importance` is set to `impurity`, and `keep.inbag` is set to `TRUE`.
+
+&nbsp; 
+
+#### Q. How do I input my data into the function parameters?
+
+To estiamte CATE, you can use the function `estiamte_cate()` and this function requires parameter like below:
+
+  + estimation_method (string): Choose 'slearner' or 'causalforest'
+  + aggregation_method (String): Choose one of options below. 
+    + 1) studyindicator: Pool all data together but keep study ID as an indicator, including them as covariates in the single-study method.
+    + 2) ensembleforest: Fit the estimation model within each study, apply each model to all indivudals across all studies, then fit ensemble random forest to augmented data.
+    + 3) studyspecific: Fit the estimation model separately for each study, and report out study-specific estimates.
+  + study_col (String): Name of the column of study indicator.Note that study_col can be NULL only when aggregation method is studyspecific. In other cases, study_col parameter should be filled with the specific column name, like 'studyid'.
+  + treatment_col (String): Name of the column of treatment.
+  + outcome_col (String): Name of the column of outcome.
+  + covariate_col (Vector): Names of the columns of covariates. The default is NULL. The length of string should be the same with the number of covariates. You can type the list like `c('var1','var2','var3')`.
+  + drop_col (Vector): Name of the columns to be deleted. You can type the list like `c('var1','var2','var3')`. Default is NULL.
+  + extra_args (List): Add additional arguments for each estimation method. For example, when you choose `causal forest` for the estimation method you may adjust extra arguments to compelte splitting tress faster by setting a smaller number of trees. (e.g.extra_args = list(num.trees = 50))
+
+&nbsp; 
+
+#### Q. What kinds of objects are returned?
+
+The result objects of `estimate_cate()` and `summary()` provide different information.
+
++ `estimate_cate()` result object: 
+    + 'GRF forest object of type causal_forest' (e.g. Number of trees, Number of training samples)
+    + 'variance importance tibble'
+    + 'original data with additional two columns, tau hat and variance of estimates'.
++ `summary()` of the result object of estimate_cate():
+  + overall ATE (object `ate`)
+  + its standard error
+  + study-specific ATE (object `studycate`) with minimum, median, maximum CATE. 
+
+&nbsp; 
+
+#### Q. Why can't I get Plot 4 (BLP) with ensemble forest?
+
+Plot4 BLP(Best Linear projection figure) is not available for the ensemble forest method. You can refer to the table below to see which plots are supported by each combination of aggregation and estimation methods. 
+
+| No | Plots from `plot()`              | Aggregation Method              | Estimation Method     |
+|----|----------------------------------|---------------------------------|-----------------------|
+| 1  | Histogram of estimated CATEs     | Available to all                | Available to all      |
+| 2  | Boxplot of CATEs by study ID     | Available to all                | Available to all      |
+| 3  | 95% CI for all CATEs             | Study specific, Study indicator | Available to all      |
+| 4  | Best Linear Projection           | Study specific, Study indicator | Causal forest         |
+| 5  | Interpretation tree              | Available to all                | Available to all      |
+
+
+&nbsp; 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
