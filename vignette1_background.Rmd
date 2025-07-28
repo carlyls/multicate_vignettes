@@ -120,15 +120,15 @@ The S-learner is a 'meta-learner' in that it combines base learners of different
 
 [^4]: Künzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). Metalearners for estimating heterogeneous treatment effects using machine learning. Proceedings of the national academy of sciences, 116(10), 4156-4165. <https://doi.org/10.1073/pnas.1804597116>
 
-BART, introduced by Chipman et al. (2007, 2010) [^5], is a Bayesian nonparametric model that combines a sum of trees approach with regularization priors. [^6],[^7] These priors shrink the model toward additive structures, reducing overfitting and provides posterior draws of outcomes, enabling the construction of credible intervals. Although the S-learner framework can incorporate various algorithms (e.g., random forests, neural networks), this package specifically uses BART for its flexibility and performance in estimating treatment effect heterogeneity. More technical details and parameter settings can be found in Sparapani et al. (2021). [^8]
+BART, introduced by Chipman et al. (2007, 2010), is a Bayesian nonparametric model that combines a sum of trees approach with regularization priors. [^5] [^6] [^7] These priors shrink the model toward additive structures, reducing overfitting and provides posterior draws of outcomes, enabling the construction of credible intervals. Although the S-learner framework can incorporate various algorithms (e.g., random forests, neural networks), this package specifically uses BART for its flexibility and performance in estimating treatment effect heterogeneity. More technical details and parameter settings can be found in Sparapani et al. (2021) [^8].
 
-[^5] Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian additive regression trees. <https://doi.org/10.1214/09-AOAS285>
+[^5]: Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian additive regression trees. <https://doi.org/10.1214/09-AOAS285>
 
 [^6]: Hill, J., Linero, A., & Murray, J. (2020). Bayesian additive regression trees: A review and look forward. Annual Review of Statistics and Its Application, 7(1), 251-278. <https://doi.org/10.1146/annurev-statistics-031219-041110>
 
 [^7]: Hill, J. L. (2011). Bayesian nonparametric modeling for causal inference. Journal of Computational and Graphical Statistics, 20(1), 217-240. <https://doi.org/10.1198/jcgs.2010.08162>
 
-[^8] Sparapani, R., Spanbauer, C., & McCulloch, R. (2021). Nonparametric machine learning and efficient computation with Bayesian additive regression trees: The BART R package. Journal of Statistical Software, 97, 1-66. <https://www.jstatsoft.org/article/view/v097i01>
+[^8]: Sparapani, R., Spanbauer, C., & McCulloch, R. (2021). Nonparametric machine learning and efficient computation with Bayesian additive regression trees: The BART R package. Journal of Statistical Software, 97, 1-66. <https://www.jstatsoft.org/article/view/v097i01>
 
 ### 2) Causal forest
 
@@ -148,13 +148,13 @@ When trials are too heterogeneous to justify combining information across studie
 
 A 'complete pooling approach' - combining all data and treating it as a single study - requires strong assumptions. To relax these, our package implements 'pooling with a trial indicator'. Basically, all of the individual data from all RCTs is combined into one comprehensive dataset, but a categorical study variable is included. This allows researchers to apply single-study approaches while accounting for full covariates including membership indicator. This will yield trial-specific CATE estimates. You can use aggregation_method = "*studyindicator*" to apply this method.
 
-![Overview of the Pooling with Trial Indicator Aggregation Method](Images/studyindicator.png)
+![Overview of the Pooling with Trial Indicator Aggregation Method](Images/studyindicator.png){width="450px" height="300px"}
 
 ### 3) Ensemble forest method
 
-This method is based on Tan and colleagues' methods[^4] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and then applies these models to all individual in all studies to get each individual trial-specific CATE estimates. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
+This method is based on Tan and colleagues' methods[^4] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and then applies these models to all individuals in all studies to get each individual trial-specific CATE estimate. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
 
-![Overview of the Ensemble Forest Aggregation Method](Images/ensemble.png)
+![Overview of the Ensemble Forest Aggregation Method](Images/ensemble.png){width="550px" height="300px"}
 
 [^4]: Tan, X., Chang, C. C. H., Zhou, L., & Tang, L. (2022, June). A tree-based model averaging approach for personalized treatment effect estimation from heterogeneous data sources. In International Conference on Machine Learning (pp. 21013-21036). PMLR. <https://proceedings.mlr.press/v162/tan22a.html>
 
