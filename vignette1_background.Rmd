@@ -82,7 +82,7 @@ Compared to other packages that more focus primarily on meta-analysis, `multicat
 
 [^3]: Brantner, C. L., Nguyen, T. Q., Tang, T., Zhao, C., Hong, H., & Stuart, E. A. (2024). Comparison of methods that combine multiple randomized trials to estimate heterogeneous treatment effects. Statistics in medicine, 43(7), 1291-1314. <https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.9955>
 
-![A comparison table of R packages related to estimation of heterogeneous treatment effects](Images/Rpackage_comparison.png)
+![A comparison table of R packages related to estimation of heterogeneous treatment effects](Images/Rpackage_comparison2.png)
 
  
 
@@ -116,11 +116,25 @@ When the goal is estimation of the CATE, real-world clinical data often involve 
 
 ### 1) S-learner
 
-The S-learner is a 'meta-learner' in that it combines base learners of different forms in a special way, and we use this learner to estimate a conditional outcome mean function given observed covariates and assigned treatment as $\mu(X,A) = E(Y|X,A)$. Then by plugging in 0 and 1 for $A$, we can obtain predicted outcomes under treatment and control for each individual and calculate $$\hat{\tau} = \hat{\mu} (X,1) - \hat{\mu} (X,0)$$. In this package, we applied Bayesian additive regression trees (BART) for this base learner.
+The S-learner is a 'meta-learner' in that it combines base learners of different forms in a special way, and we use this learner to estimate a conditional outcome mean function given observed covariates and assigned treatment as $\mu(X,A) = E(Y|X,A)$. Then by plugging in 0 and 1 for $A$, we can obtain predicted outcomes under treatment and control for each individual and calculate $$\hat{\tau} = \hat{\mu} (X,1) - \hat{\mu} (X,0)$$. In this package, we applied Bayesian additive regression trees (BART) as the base learner. [^4]
+
+[^4]: Künzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). Metalearners for estimating heterogeneous treatment effects using machine learning. Proceedings of the national academy of sciences, 116(10), 4156-4165. <https://doi.org/10.1073/pnas.1804597116>
+
+BART, introduced by Chipman et al. (2007, 2010) [^5], is a Bayesian nonparametric model that combines a sum of trees approach with regularization priors. [^6],[^7] These priors shrink the model toward additive structures, reducing overfitting and provides posterior draws of outcomes, enabling the construction of credible intervals. Although the S-learner framework can incorporate various algorithms (e.g., random forests, neural networks), this package specifically uses BART for its flexibility and performance in estimating treatment effect heterogeneity. More technical details and parameter settings can be found in Sparapani et al. (2021). [^8]
+
+[^5] Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian additive regression trees. <https://doi.org/10.1214/09-AOAS285>
+
+[^6]: Hill, J., Linero, A., & Murray, J. (2020). Bayesian additive regression trees: A review and look forward. Annual Review of Statistics and Its Application, 7(1), 251-278. <https://doi.org/10.1146/annurev-statistics-031219-041110>
+
+[^7]: Hill, J. L. (2011). Bayesian nonparametric modeling for causal inference. Journal of Computational and Graphical Statistics, 20(1), 217-240. <https://doi.org/10.1198/jcgs.2010.08162>
+
+[^8] Sparapani, R., Spanbauer, C., & McCulloch, R. (2021). Nonparametric machine learning and efficient computation with Bayesian additive regression trees: The BART R package. Journal of Statistical Software, 97, 1-66. <https://www.jstatsoft.org/article/view/v097i01>
 
 ### 2) Causal forest
 
-The causal forest is similar to a traditional random forest, but the primary estimand is the treatment effect itself, not the outcome mean function. It recursively partitions covariates to best split based on treatment effect heterogeneity. The treatment effect is estimated as the difference in average outcomes between the treatment and control units within each leaf. In other words, the causal forest is the weighted aggregation of many causal trees.
+The causal forest is similar to a traditional random forest, but the primary estimand is the treatment effect itself, not the outcome mean function. It recursively partitions covariates to best split based on treatment effect heterogeneity. The treatment effect is estimated as the difference in average outcomes between the treatment and control units within each leaf. In other words, the causal forest is the weighted aggregation of many causal trees. [^9]
+
+[^9]: Athey, S., Tibshirani, J., & Wager, S. (2019). Generalized random forests. <https://www.jstor.org/stable/26581894>
 
 ## Aggregation Methods
 
@@ -134,9 +148,13 @@ When trials are too heterogeneous to justify combining information across studie
 
 A 'complete pooling approach' - combining all data and treating it as a single study - requires strong assumptions. To relax these, our package implements 'pooling with a trial indicator'. Basically, all of the individual data from all RCTs is combined into one comprehensive dataset, but a categorical study variable is included. This allows researchers to apply single-study approaches while accounting for full covariates including membership indicator. This will yield trial-specific CATE estimates. You can use aggregation_method = "*studyindicator*" to apply this method.
 
+![Overview of the Pooling with Trial Indicator Aggregation Method](Images/studyindicator.png)
+
 ### 3) Ensemble forest method
 
 This method is based on Tan and colleagues' methods[^4] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and then applies these models to all individual in all studies to get each individual trial-specific CATE estimates. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
+
+![Overview of the Ensemble Forest Aggregation Method](Images/ensemble.png)
 
 [^4]: Tan, X., Chang, C. C. H., Zhou, L., & Tang, L. (2022, June). A tree-based model averaging approach for personalized treatment effect estimation from heterogeneous data sources. In International Conference on Machine Learning (pp. 21013-21036). PMLR. <https://proceedings.mlr.press/v162/tan22a.html>
 
@@ -186,11 +204,19 @@ An ideal use case of the prediction would be: using previously conducted studies
 
 [**Question 4:** What kind of visualizations does `multicate` provide?]{.underline}
 
-For Kyungeun to fill in, noting that we will elaborate upon them and show an example in the next section.
+`multicate` provides five types of visualization plots, along with a covariate distribution plot across studies: a histogram of estimated conditional average treatment effects (CATEs), a boxplot of CATEs stratified by study membership, a plot of 95% confidence intervals for all CATEs sorted by their estimated values, a best linear projection (available only when `estimation_method = "causalforest"`), and an interpretation tree. Additionally, a covariate distribution plot across studies highlights how the distribution of a selected covariate varies across different studies. This helps researchers assess the extent of covariate imbalance or heterogeneity between studies.
+
+![Examples of Visualization Outputs from `multicate`](Images/plotExample.png)
+
 
 [**Question 5:** What packages does `multicate` rely on?]{.underline}
 
-For Kyungeun and/or Daniel to fill in.
+
+`multicate` builds on established R packages depending on the method used: 
+
+- S-learner is implemented using the `dbarts` package. Default setting include: `keeptrees = TRUE`, and `verbose = FALSE` (only when `aggregation_method = "ensembleforest"`.
+
+- Causal forest is based on the `grf` package, using its `causal_forest()` function with defaults: `importance = "impurity"` and `keep.inbag = TRUE`.
 
  
 
