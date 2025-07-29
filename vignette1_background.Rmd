@@ -220,7 +220,7 @@ An ideal use case of the prediction would be: using previously conducted studies
 
 `multicate` builds on established R packages depending on the method used: 
 
-- S-learner is implemented using the `dbarts` package. Default setting include: `keeptrees = TRUE`, and `verbose = FALSE` (only when `aggregation_method = "ensembleforest"`.
+- S-learner is implemented using the `dbarts` package. Default setting include: `keeptrees = TRUE`, and `verbose = FALSE` (only when `aggregation_method = "ensembleforest"`).
 
 - Causal forest is based on the `grf` package, using its `causal_forest()` function with defaults: `importance = "impurity"` and `keep.inbag = TRUE`.
 
