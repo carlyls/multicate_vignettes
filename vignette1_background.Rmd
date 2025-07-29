@@ -152,11 +152,11 @@ A 'complete pooling approach' - combining all data and treating it as a single s
 
 ### 3) Ensemble forest method
 
-This method is based on Tan and colleagues' methods[^4] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and then applies these models to all individuals in all studies to get each individual trial-specific CATE estimate. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
+This method is based on Tan and colleagues' methods[^10] for federated learning, devised for scenarios in which individual data cannot be shared across trial sites. First, it builds localized models for CATE within each trial, and then applies these models to all individuals in all studies to get each individual trial-specific CATE estimate. Then, an ensemble model is trained using these estimates as the response variable, with individual covariates and trial indicators as predictors. This method can be selected with aggregation_method = "*ensembleforest*".
 
 ![Overview of the Ensemble Forest Aggregation Method](Images/ensemble.png){width="550px" height="300px"}
 
-[^4]: Tan, X., Chang, C. C. H., Zhou, L., & Tang, L. (2022, June). A tree-based model averaging approach for personalized treatment effect estimation from heterogeneous data sources. In International Conference on Machine Learning (pp. 21013-21036). PMLR. <https://proceedings.mlr.press/v162/tan22a.html>
+[^10]: Tan, X., Chang, C. C. H., Zhou, L., & Tang, L. (2022, June). A tree-based model averaging approach for personalized treatment effect estimation from heterogeneous data sources. In International Conference on Machine Learning (pp. 21013-21036). PMLR. <https://proceedings.mlr.press/v162/tan22a.html>
 
  
 
@@ -218,7 +218,11 @@ An ideal use case of the prediction would be: using previously conducted studies
 
 - Causal forest is based on the `grf` package, using its `causal_forest()` function with defaults: `importance = "impurity"` and `keep.inbag = TRUE`.
 
- 
+For additional details and parameter options, refer to the package documentation. [^11] [^12]
+
+[^11]: dbarts CRAN manual <https://cran.r-project.org/web/packages/dbarts/index.html>
+
+[^12]: grf CRAN manual <https://cran.r-project.org/web/packages/grf/index.html>
 
 # Next Up:
 
