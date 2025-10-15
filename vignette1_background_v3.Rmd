@@ -58,7 +58,7 @@ Randomized controlled trials (RCTs) are the gold standard for unbiased average e
 
 The `multicate` package guides treatment decision-making in a health care or other practical setting by estimating heterogeneous treatment effects. It implements methods that combine multiple studies using individual, patient-level data. The focal *estimand* in this package is the conditional average treatment effect (CATE), defined under Rubin's potential outcomes framework.[^2] We define $A$ to represent a binary treatment indicator, $S$ a categorical variable for the trial in which the individual participated (from 1 to $K$, with a total of $K$ studies), $\textbf{X}$ the covariates, and $Y$ a continuous outcome. Then, we let $Y(0)$ and $Y(1)$ be the potential outcomes under control and treatment, respectively. Generally, the CATE is defined as the expected difference in the potential outcomes under treatment versus control, *conditional on covariates,* $\textbf{X's}$:$$\tau(\textbf{X})=E(Y(1)-E(Y(0)|\textbf{X})$$
 
-[^2]: Rubin, D. B. (1974). Estimating causal effects of treatments in randomized and nonrandomized studies. Journal of educational Psychology, 66(5), 688. <https://psycnet.apa.org/record/1975-06502-001>
+[^2]: Rubin, D. B. (1974). Estimating causal effects of treatments in randomized and nonrandomized studies. Journal of Educational Psychology, 66(5), 688. <https://psycnet.apa.org/record/1975-06502-001>
 
 (Note that this comparison of potential outcomes could take a different form, for example, a ratio, for non-continuous outcomes.) We can also conceptualize the CATE as conditional not only on covariates, but also on study membership, where differences in the treatment effect due to study membership may reflect differences in the distributions of unobserved effect moderators. Here, the CATE can be expressed as $$\tau_{S}(\textbf{X}) = E(Y(1)-Y(0)|\textbf{X}, S)$$ The `multicate` package can estimates either of these CATE expressions, depending on the specific estimation (or prediction) technique chosen, discussed further below. Notably, while the methods in `multicate` were originally developed to target CATE estimation across multiple RCTs, they can also be utilized in non-experimental studies. We elaborate upon this in the sections to follow.
 
@@ -76,7 +76,7 @@ Compared to other packages [^3] [^4] [^5] that primarily focus on aggregate-data
 
 [^5]: personalized CRAN manual <https://cran.r-project.org/web/packages/personalized/index.html>
 
-![A comparison table of R packages related to estimation of heterogeneous treatment effects](Images/Rpackage_comparison2.png)
+![A comparison table of R packages related to estimation of heterogeneous treatment effects](Images/Rpackage_comparison_updated.png)
 
  
 
@@ -84,7 +84,7 @@ Compared to other packages [^3] [^4] [^5] that primarily focus on aggregate-data
 
 Estimate CATEs with `estimate_cate()`, then generate prediction using the S3 `predict()` method on the fitted object by `estimate_cate()`. The figure below outlines the package's workflow: train a set of RCTs, and then optionally predict CATEs for a separate target population.
 
-![A two-step approach for using the `multicate` package.](Images/TwoStep_Update.png){width="1000px" height="300px"}
+![A two-step approach for using the `multicate` package.](Images/TwoStep_updated.png){width="1000px" height="300px"}
 
 ## Assumptions
 
@@ -162,7 +162,7 @@ Once we have estimated the CATE, a unique feature of the `multicate` package is 
 
 A requirement for the `multicate` approach to prediction of the CATE is that the estimates should by study-specific CATEs -- specifically, CATEs that are estimated according to one model fit per study (aggregation_method = "studyspecific"). To predict the CATE for a target population, we can supply the object returned by `estimate_cate()` to the `predict()` S3 generic function which will apply `multicate`'s S3 method for CATE prediction, yielding prediction intervals for CATEs in the new target setting. (An S3 generic in R is a standard interface that automatically calls the version of the function designed for your object’s class.)
 
-CATE prediction leverages prediction interval techniques used in two-stage meta-analysis. Briefly:
+CATE prediction leverages prediction interval techniques used in two-stage meta-analysis.[^13] Briefly:
 
 1.  **Stage 1:** Estimating the CATE in each study separately, as described above (using `estimate_cate()` with `aggregation_method = "studyspecific"`).
 
@@ -170,6 +170,7 @@ CATE prediction leverages prediction interval techniques used in two-stage meta-
 
 From this meta-analysis, we can form prediction intervals around the inverse variance-weighted CATE for a particular covariate profile, estimating the within-study variance from Stage 1 and the between-study variance using restricted maximum likelihood estimation (REML). We replicate the second stage and fit a meta-analysis for every covariate profile $(\textbf{X*})$ of interest in the target setting data to form prediction intervals for each $\tau(\textbf{X*})$.
 
+[^13]: Brantner, C. L., Nguyen, T. Q., Parikh, H., Zhao, C., Hong, H., & Stuart, E. A. (2025). Precision Mental Health: Predicting Heterogeneous Treatment Effects for Depression through Data Integration. arXiv preprint arXiv:2509.04604.
  
 
 # Q&A
@@ -226,11 +227,11 @@ An ideal use case of the prediction would be: using previously conducted studies
 
 - Causal forest is based on the `grf` package, using its `causal_forest()` function with defaults: `importance = "impurity"` and `keep.inbag = TRUE`.
 
-For additional details and parameter options, refer to the package documentation. [^13] [^14]
+For additional details and parameter options, refer to the package documentation. [^14] [^15]
 
-[^13]: dbarts CRAN manual <https://cran.r-project.org/web/packages/dbarts/index.html>
+[^14]: dbarts CRAN manual <https://cran.r-project.org/web/packages/dbarts/index.html>
 
-[^14]: grf CRAN manual <https://cran.r-project.org/web/packages/grf/index.html>
+[^15]: grf CRAN manual <https://cran.r-project.org/web/packages/grf/index.html>
 
 
 [**Question 6:** What covariates should I include as potential moderators?]{.underline}
